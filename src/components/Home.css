@@ -65,3 +65,12 @@ body {
     flex-grow: 1;
   }
   
+
+  .fetched-balance {
+    font-size: 1.2em; 
+    color: #333; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  

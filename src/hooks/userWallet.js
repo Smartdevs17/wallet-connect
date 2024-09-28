@@ -5,6 +5,7 @@ const useWallet = () => {
   const [provider, setProvider] = useState(null);
   const [address, setAddress] = useState('');
   const [balance, setBalance] = useState('');
+  const [userBalance, setUserBalance] = useState('');
   const [network, setNetwork] = useState('');
   const [isConnected, setIsConnected] = useState(false);
 
@@ -14,26 +15,25 @@ const useWallet = () => {
         const ethProvider = new ethers.BrowserProvider(window.ethereum);
         setProvider(ethProvider);
 
-        // Set up listeners for account and network changes
         window.ethereum.on('accountsChanged', (accounts) => {
           if (accounts.length) {
             setAddress(accounts[0]);
             fetchBalance(accounts[0], ethProvider);
           } else {
-            disconnectWallet(); // Properly disconnect if no accounts are found
+            disconnectWallet(); 
           }
         });
 
         window.ethereum.on('chainChanged', async () => {
           const newProvider = new ethers.BrowserProvider(window.ethereum);
-          setProvider(newProvider); // Reset the provider
+          setProvider(newProvider); 
 
           const networkDetails = await newProvider.getNetwork();
           const networkName = getNetworkName(networkDetails.chainId);
           setNetwork(networkName);
 
           if (address) {
-            fetchBalance(address, newProvider); // Fetch balance for the same account on the new network
+            fetchBalance(address, newProvider); 
           }
         });
       };
@@ -53,8 +53,8 @@ const useWallet = () => {
       setIsConnected(true);
 
       const ethProvider = new ethers.BrowserProvider(window.ethereum);
-      setProvider(ethProvider); // Set the provider
-      fetchBalance(accounts[0], ethProvider); // Fetch balance with the provider
+      setProvider(ethProvider); 
+      fetchBalance(accounts[0], ethProvider); 
 
       const networkDetails = await ethProvider.getNetwork();
       const networkName = getNetworkName(networkDetails.chainId);
@@ -66,17 +66,18 @@ const useWallet = () => {
 
   const disconnectWallet = async () => {
     try {
-      setProvider(null); // Clear provider state
-      setAddress('');  // Clear address state
-      setBalance('');  // Clear balance state
-      setNetwork('');  // Clear network state
-      setIsConnected(false);  // Mark wallet as disconnected
+      setProvider(null); 
+      setAddress(''); 
+      setBalance(''); 
+      setNetwork('');  
+      setIsConnected(false);  
     } catch (error) {
       console.error('Error disconnecting wallet:', error);
     }
   };
 
   const fetchBalance = async (address, providerInstance) => {
+   
     if (!providerInstance) return;
     try {
       const balance = await providerInstance.getBalance(address);
@@ -86,7 +87,16 @@ const useWallet = () => {
     }
   };
 
-  // Function to map chain ID to network names
+  const fetchUserBalance = async (address, providerInstance) => {
+    if (!providerInstance) return;
+    try {
+      const balance = await providerInstance.getBalance(address);
+      setUserBalance(ethers.formatEther(balance));
+    } catch (error) {
+      console.error('Error fetching balance:', error);
+    }
+  };
+
   const getNetworkName = (chainId) => {
     const networkNames = {
       1: 'Ethereum Mainnet',
@@ -109,7 +119,9 @@ const useWallet = () => {
     balance,
     network,
     isConnected,
-    fetchBalance,
+    fetchUserBalance,
+    userBalance,
+    provider
   };
 };
 
