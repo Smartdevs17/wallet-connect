@@ -22,7 +22,7 @@ const Home = () => {
     console.log("Input address: ", inputAddress);
     if (inputAddress) {
       setLoading(true);
-      await fetchUserBalance(inputAddress, provider); // Pass the provider instance
+      await fetchUserBalance(inputAddress, provider);
       setLoading(false);
     }
   };
