@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
 
 const useWallet = () => {
@@ -9,75 +9,7 @@ const useWallet = () => {
   const [network, setNetwork] = useState('');
   const [isConnected, setIsConnected] = useState(false);
 
-  useEffect(() => {
-    if (window.ethereum) {
-      const initializeProvider = async () => {
-        const ethProvider = new ethers.BrowserProvider(window.ethereum);
-        setProvider(ethProvider);
-
-        window.ethereum.on('accountsChanged', (accounts) => {
-          if (accounts.length) {
-            setAddress(accounts[0]);
-            fetchBalance(accounts[0], ethProvider);
-          } else {
-            disconnectWallet(); 
-          }
-        });
-
-        window.ethereum.on('chainChanged', async () => {
-          const newProvider = new ethers.BrowserProvider(window.ethereum);
-          setProvider(newProvider); 
-
-          const networkDetails = await newProvider.getNetwork();
-          const networkName = getNetworkName(networkDetails.chainId);
-          setNetwork(networkName);
-
-          if (address) {
-            fetchBalance(address, newProvider); 
-          }
-        });
-      };
-
-      initializeProvider();
-    }
-  }, [address]);
-
-  const connectWallet = async () => {
-    try {
-      if (!window.ethereum) {
-        alert('MetaMask is not installed');
-        return;
-      }
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      setAddress(accounts[0]);
-      setIsConnected(true);
-
-      const ethProvider = new ethers.BrowserProvider(window.ethereum);
-      setProvider(ethProvider); 
-      fetchBalance(accounts[0], ethProvider); 
-
-      const networkDetails = await ethProvider.getNetwork();
-      const networkName = getNetworkName(networkDetails.chainId);
-      setNetwork(networkName);
-    } catch (error) {
-      console.error('Error connecting wallet:', error);
-    }
-  };
-
-  const disconnectWallet = async () => {
-    try {
-      setProvider(null); 
-      setAddress(''); 
-      setBalance(''); 
-      setNetwork('');  
-      setIsConnected(false);  
-    } catch (error) {
-      console.error('Error disconnecting wallet:', error);
-    }
-  };
-
-  const fetchBalance = async (address, providerInstance) => {
-   
+  const fetchBalance = useCallback(async (address, providerInstance) => {
     if (!providerInstance) return;
     try {
       const balance = await providerInstance.getBalance(address);
@@ -85,17 +17,48 @@ const useWallet = () => {
     } catch (error) {
       console.error('Error fetching balance:', error);
     }
-  };
+  }, []);
 
-  const fetchUserBalance = async (address, providerInstance) => {
+  const fetchUserBalance = useCallback(async (address, providerInstance) => {
     if (!providerInstance) return;
     try {
       const balance = await providerInstance.getBalance(address);
       setUserBalance(ethers.formatEther(balance));
     } catch (error) {
-      console.error('Error fetching balance:', error);
+      console.error('Error fetching user balance:', error);
     }
-  };
+  }, []);
+
+  const connectWallet = useCallback(async () => {
+    try {
+      if (!window.ethereum) {
+        alert('MetaMask is not installed');
+        return;
+      }
+
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      setAddress(accounts[0]);
+      setIsConnected(true);
+
+      const ethProvider = new ethers.BrowserProvider(window.ethereum);
+      setProvider(ethProvider);
+      fetchBalance(accounts[0], ethProvider);
+
+      const networkDetails = await ethProvider.getNetwork();
+      const networkName = getNetworkName(networkDetails.chainId);
+      setNetwork(networkName);
+    } catch (error) {
+      console.error('Error connecting wallet:', error);
+    }
+  }, [fetchBalance]);
+
+  const disconnectWallet = useCallback(() => {
+    setProvider(null);
+    setAddress('');
+    setBalance('');
+    setNetwork('');
+    setIsConnected(false);
+  }, []);
 
   const getNetworkName = (chainId) => {
     const networkNames = {
@@ -112,16 +75,53 @@ const useWallet = () => {
     return networkNames[chainId] || 'Unknown Network';
   };
 
+  useEffect(() => {
+    if (window.ethereum) {
+      const ethProvider = new ethers.BrowserProvider(window.ethereum);
+      setProvider(ethProvider);
+
+      const handleAccountsChanged = (accounts) => {
+        if (accounts.length > 0) {
+          setAddress(accounts[0]);
+          fetchBalance(accounts[0], ethProvider);
+        } else {
+          disconnectWallet();
+        }
+      };
+
+      const handleChainChanged = async () => {
+        const newProvider = new ethers.BrowserProvider(window.ethereum);
+        setProvider(newProvider);
+
+        const networkDetails = await newProvider.getNetwork();
+        const networkName = getNetworkName(networkDetails.chainId);
+        setNetwork(networkName);
+
+        if (address) {
+          fetchBalance(address, newProvider);
+        }
+      };
+
+      window.ethereum.on('accountsChanged', handleAccountsChanged);
+      window.ethereum.on('chainChanged', handleChainChanged);
+
+      return () => {
+        window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+        window.ethereum.removeListener('chainChanged', handleChainChanged);
+      };
+    }
+  }, [address, fetchBalance, disconnectWallet]);
+
   return {
     connectWallet,
     disconnectWallet,
     address,
     balance,
+    userBalance,
     network,
     isConnected,
     fetchUserBalance,
-    userBalance,
-    provider
+    provider,
   };
 };
 
