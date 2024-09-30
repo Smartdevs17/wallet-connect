@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import useWallet from '../hooks/userWallet'; 
-import './Home.css'; 
+import { useWallet } from '../contexts/walletContext'; 
+import './Home.css';
 
 const Home = () => {
   const {
@@ -12,14 +12,13 @@ const Home = () => {
     isConnected,
     fetchUserBalance,
     userBalance,
-    provider,  
+    provider,
   } = useWallet();
 
   const [inputAddress, setInputAddress] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleGetBalance = async () => {
-    console.log("Input address: ", inputAddress);
     if (inputAddress) {
       setLoading(true);
       await fetchUserBalance(inputAddress, provider);
@@ -61,13 +60,13 @@ const Home = () => {
         <button className="button get-balance" onClick={handleGetBalance} disabled={loading}>
           {loading ? 'Loading...' : 'Get Balance'}
         </button>
-
       </div>
+
       {userBalance && (
-          <div className="fetched-balance">
-            <p>Fetched Balance: {userBalance} ETH</p>
-          </div>
-        )}
+        <div className="fetched-balance">
+          <p>Fetched Balance: {userBalance} ETH</p>
+        </div>
+      )}
     </div>
   );
 };
